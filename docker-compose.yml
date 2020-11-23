@@ -58,7 +58,7 @@ services:
     volumes:
       - ./gogs-fs:/data
     links:
-      - "postgres:postgres"
+      - "postgres"
     labels:
       - "traefik.http.routers.git.rule=Host(`localhost`)"
       - "traefik.http.services.git.loadbalancer.server.port=3000"
