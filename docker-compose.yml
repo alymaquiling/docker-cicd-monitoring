@@ -1,0 +1,88 @@
+version: "3.8"
+
+services:
+  reverse-proxy:
+    # The official v2 Traefik docker image
+    image: traefik:v2.2
+    networks:
+      - public
+    # Enables the web UI and tells Traefik to listen to docker
+    command:
+      - "--api.insecure=true"
+      - "--entrypoints.web.address=:80"
+      - "--providers.docker=true"
+    ports:
+      # The HTTP port
+      - "80:80"
+      # The Web UI (enabled by --api.insecure=true)
+      - "8080:8080"
+    volumes:
+      # So that Traefik can listen to the Docker events
+      - /var/run/docker.sock:/var/run/docker.sock
+    labels:
+      - "traefik.http.routers.traefikdashboard.rule=Host(`localhost`)"
+      - "traefik.http.services.traefikdashboard.loadbalancer.server.port=8080"
+
+  nexus:
+    image: sonatype/nexus3
+    networks:
+      - public
+    ports:
+      - "8081:8081"
+    volumes:
+      - ./nexus-fs:/nexus-data
+    labels:
+      - "traefik.http.routers.nexus.rule=Host(`localhost`)"
+
+  jenkins:
+    image: jenkins/jenkins
+    networks:
+      - public
+    ports:
+      - "8082:8080"
+    volumes:
+      - ./jenkins-fs:/var/jenkins_home
+      - /var/run/docker.sock:/var/run/docker.sock
+    labels:
+      - "traefik.http.routers.jenkins.rule=Host(`localhost`)"
+
+  # self-hosted Git service
+  git:
+    image: gogs/gogs
+    networks:
+      - public
+      - db
+    ports:
+      - "10022:22"
+      - "3000:3000"
+    volumes:
+      - ./gogs-fs:/data
+    links:
+      - "postgres:postgres"
+    labels:
+      - "traefik.http.routers.git.rule=Host(`localhost`)"
+      - "traefik.http.services.git.loadbalancer.server.port=3000"
+
+  # database for gogs
+  postgres:
+    image: postgres:latest
+    environment:
+      - "POSTGRES_USER=gogs"
+      - "POSTGRES_PASSWORD=changeme"
+      - "POSTGRES_DB=gogs"
+    networks:
+      - db
+    ports:
+      # Maps tcp port 5432 on service container to the host
+      - 5432:5432
+    volumes:
+      - "./postgres-fs:/var/lib/postgresql"
+    labels:
+      - "traefik.http.routers.postgres.rule=Host(`localhost`)"
+      - "traefik.http.services.postgres.loadbalancer.server.port=5432"
+
+networks:
+  public:
+    external: true
+  db:
+    external: false
