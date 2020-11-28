@@ -19,6 +19,7 @@ services:
     volumes:
       # So that Traefik can listen to the Docker events
       - /var/run/docker.sock:/var/run/docker.sock
+      - ./acme.json:/acme.json
     labels:
       - "traefik.http.routers.traefikdashboard.rule=Host(`localhost`)"
       - "traefik.http.services.traefikdashboard.loadbalancer.server.port=8080"
@@ -46,23 +47,6 @@ services:
     labels:
       - "traefik.http.routers.jenkins.rule=Host(`localhost`)"
 
-  # self-hosted Git service
-  git:
-    image: gogs/gogs
-    networks:
-      - public
-      - db
-    ports:
-      - "10022:22"
-      - "3000:3000"
-    volumes:
-      - ./gogs-fs:/data
-    links:
-      - "postgres"
-    labels:
-      - "traefik.http.routers.git.rule=Host(`localhost`)"
-      - "traefik.http.services.git.loadbalancer.server.port=3000"
-
   # database for gogs
   postgres:
     image: postgres:latest
@@ -71,18 +55,34 @@ services:
       - "POSTGRES_PASSWORD=changeme"
       - "POSTGRES_DB=gogs"
     networks:
-      - db
+      - public
+    restart: "always"
     ports:
       # Maps tcp port 5432 on service container to the host
-      - 5432:5432
+      - "5432:5432"
     volumes:
       - "./postgres-fs:/var/lib/postgresql"
     labels:
       - "traefik.http.routers.postgres.rule=Host(`localhost`)"
       - "traefik.http.services.postgres.loadbalancer.server.port=5432"
 
+  # self-hosted Git service
+  git:
+    image: gogs/gogs
+    networks:
+      - public
+    ports:
+      - "10022:22"
+      - "10080:3000"
+    volumes:
+      - ./gogs-fs:/data
+    links:
+      - postgres
+    restart: "always"
+    labels:
+      - "traefik.http.routers.git.rule=Host(`localhost`)"
+      - "traefik.http.services.git.loadbalancer.server.port=3000"
+
 networks:
   public:
     external: true
-  db:
-    external: false
