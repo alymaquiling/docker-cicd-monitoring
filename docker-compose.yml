@@ -1,29 +1,6 @@
 version: "3.8"
 
 services:
-  reverse-proxy:
-    # The official v2 Traefik docker image
-    image: traefik:v2.2
-    networks:
-      - public
-    # Enables the web UI and tells Traefik to listen to docker
-    command:
-      - "--api.insecure=true"
-      - "--entrypoints.web.address=:80"
-      - "--providers.docker=true"
-    ports:
-      # The HTTP port
-      - "80:80"
-      # The Web UI (enabled by --api.insecure=true)
-      - "8080:8080"
-    volumes:
-      # So that Traefik can listen to the Docker events
-      - /var/run/docker.sock:/var/run/docker.sock
-      - ./acme.json:/acme.json
-    labels:
-      - "traefik.http.routers.traefikdashboard.rule=Host(`localhost`)"
-      - "traefik.http.services.traefikdashboard.loadbalancer.server.port=8080"
-
   nexus:
     image: sonatype/nexus3
     networks:
@@ -33,7 +10,7 @@ services:
     volumes:
       - ./nexus-fs:/nexus-data
     labels:
-      - "traefik.http.routers.nexus.rule=Host(`localhost`)"
+      - traefik.http.routers.nexus.rule=Host(`nexus.localhost`)
 
   jenkins:
     image: jenkins/jenkins
@@ -43,9 +20,8 @@ services:
       - "8082:8080"
     volumes:
       - ./jenkins-fs:/var/jenkins_home
-      - /var/run/docker.sock:/var/run/docker.sock
     labels:
-      - "traefik.http.routers.jenkins.rule=Host(`localhost`)"
+      - traefik.http.routers.jenkins.rule=Host(`jenkins.localhost`)
 
   # database for gogs
   postgres:
@@ -62,26 +38,48 @@ services:
       - "5432:5432"
     volumes:
       - "./postgres-fs:/var/lib/postgresql"
-    labels:
-      - "traefik.http.routers.postgres.rule=Host(`localhost`)"
-      - "traefik.http.services.postgres.loadbalancer.server.port=5432"
 
   # self-hosted Git service
   git:
     image: gogs/gogs
     networks:
       - public
-    ports:
-      - "10022:22"
-      - "10080:3000"
+    #ports:
+    #  - "10022:22"
+    #  - "10080:3000"
     volumes:
       - ./gogs-fs:/data
     links:
       - postgres
     restart: "always"
     labels:
-      - "traefik.http.routers.git.rule=Host(`localhost`)"
-      - "traefik.http.services.git.loadbalancer.server.port=3000"
+      - traefik.http.routers.git.entrypoints=web
+      - traefik.http.routers.git.rule=Host(`git.localhost`)
+      - traefik.http.services.git-service.loadbalancer.server.port=3000
+
+  reverse-proxy:
+    # The official v2 Traefik docker image
+    image: traefik:v2.2
+    networks:
+      - public
+    # Enables the web UI and tells Traefik to listen to docker
+    command:
+      - "--api.insecure=true"
+      - "--entrypoints.web.address=:80"
+      - "--providers.docker=true"
+
+    ports:
+      # The HTTP port
+      - "80:80"
+      # The Web UI (enabled by --api.insecure=true)
+      - "8080:8080"
+      - "3000:3000"
+    volumes:
+      # So that Traefik can listen to the Docker events
+      - /var/run/docker.sock:/var/run/docker.sock
+    labels:
+      - traefik.http.routers.traefikdashboard.rule=Host(`traefik.localhost`)
+      - "traefik.http.services.traefikdashboard.loadbalancer.server.port=8080"
 
 networks:
   public:
