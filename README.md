@@ -1,6 +1,6 @@
-# Reverse Proxy and Monitoring for CI/CD pipeline
+# Reverse Proxy and Monitoring with Traefik 
 
-# Built and deployed with Docker Compose
+# CI/CD pipeline built and deployed with Docker Compose
 
 Runs containers for Traefik, Jenkins, Nexus Repository, Gogs (self-hosted Git service) and PostgreSQL (dependency for Gogs)
 
