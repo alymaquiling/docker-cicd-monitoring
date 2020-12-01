@@ -1,8 +1,12 @@
-# CI/CD pipeline with Docker Compose
+# Reverse Proxy and Monitoring for CI/CD pipeline
+
+# Built and deployed with Docker Compose
 
 Runs containers for Traefik, Jenkins, Nexus Repository, Gogs (self-hosted Git service) and PostgreSQL (dependency for Gogs)
 
-To deploy containers locally, run `./start.sh`
+To deploy containers locally, run `docker-compose up -d` in the root folder.
+
+Note: This has only been tested on Windows, with Ubuntu 20.04 on WSL2
 
 ## Screenshots
 
